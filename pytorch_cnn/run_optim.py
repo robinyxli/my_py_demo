@@ -30,14 +30,14 @@ load_model = False
 
 class run_optim:
     def __init__(self, alpha, miu, X_y_set):
-        self.optimizer = optim.SGD(model.parameters(), lr=alpha, momentum=miu, weight_decay=0.2)
+        self.optimizer = optim.SGD(model.parameters(), lr=alpha, momentum=miu, weight_decay=0)
         self.alpha = alpha
         self.miu = miu
         self.X_train = X_y_set[0]
         self.y_train = X_y_set[1]
         self.X_test = X_y_set[2]
         self.y_test = X_y_set[3]
-        self.batch_size = round(len(self.X_train) / 1.001)
+        self.batch_size = round(len(self.X_train) / 1.1)
 
     @staticmethod
     def loss_function(x):
@@ -80,13 +80,13 @@ class run_optim:
                 'epochs': epochs}
             torch.save(checkpoint, file_path + str(self.miu) + '.pth')
 
-        print("Model's state_dict:")
-        for param_tensor in model.state_dict():
-            print(param_tensor, "\t", model.state_dict()[param_tensor])
+        #print("Model's state_dict:")
+        #for param_tensor in model.state_dict():
+            #print(param_tensor, "\t", model.state_dict()[param_tensor])
 
-        print("Optimizer's state_dict:")
-        for var_name in optimizer.state_dict():
-            print(var_name, "\t", optimizer.state_dict()[var_name])
+        #print("Optimizer's state_dict:")
+        #for var_name in optimizer.state_dict():
+            #print(var_name, "\t", optimizer.state_dict()[var_name])
 
     def model_test(self):
         if not load_model:
@@ -104,7 +104,7 @@ class run_optim:
         correct = 0
         with torch.no_grad():
             for i in range(0, len(X_test)):
-                y_hat = model(X_test[i])
+                y_hat = model(X_test[i].view(-1, 1, N, time_step + 1))
                 y = y_test[i]
                 if torch.argmax(y_hat) == torch.argmax(y):
                     correct += 1
@@ -120,9 +120,9 @@ class run_optim:
 if __name__ == "__main__":
     time_step = 252
     # Number of Simulations
-    N = 1000
+    N = 500
     # Number of Samples
-    M = 1000
+    M = 500
     ls = []
     X = torch.Tensor([])
     y = torch.Tensor([])
@@ -131,17 +131,17 @@ if __name__ == "__main__":
         p = random.random()
         if p < 0.5:
             obj = sim.BS_asset_sim(miu=0.05,
-                                sigma=np.array([random.uniform(0.1, 0.3), random.uniform(0.1, 0.3)]),
-                                rho=random.uniform(-0.5, 0.5),
-                                J_apt=[0, 0],
+                                sigma=np.array([0, 0.2]),
+                                rho=0,
+                                J_apt=[random.uniform(-0.01, 0), random.uniform(0, 0.01)],
                                 _lambda=5, S_0=400, T=1, t=0, time_step=time_step, N=N)
             X = torch.cat((X, torch.Tensor(obj.exact()).view(-1, 1, N, time_step + 1)), 0)
             y = torch.cat((y, torch.Tensor([1, 0]).view(1, 2)), 0)
         else:
             obj = sim.BS_asset_sim(miu=0.05,
-                                sigma=np.array([random.uniform(0.1, 0.3), random.uniform(0.1, 0.3)]),
-                                rho=random.uniform(-0.5, 0.5),
-                                J_apt=[random.uniform(-0.5, 0), random.uniform(0, 0.5)],
+                                sigma=np.array([0, 0.2]),
+                                rho=0,
+                                J_apt=[random.uniform(-1, 0), random.uniform(0, 1)],
                                 _lambda=5, S_0=400, T=1, t=0, time_step=time_step, N=N)
             X = torch.cat((X, torch.Tensor(obj.exact()).view(-1, 1, N, time_step + 1)), 0)
             y = torch.cat((y, torch.Tensor([0, 1]).view(1, 2)), 0)
@@ -150,5 +150,4 @@ if __name__ == "__main__":
     X_train, X_test = X[:train_split], X[train_split:]
     y_train, y_test = y[:train_split], y[train_split:]
     X_y_set = X_train, y_train, X_test, y_test
-
-    run_optim(alpha=0.1, miu=0.7, X_y_set=X_y_set).model_test()
+    run_optim(alpha=0.05, miu=0.75, X_y_set=X_y_set).model_test()

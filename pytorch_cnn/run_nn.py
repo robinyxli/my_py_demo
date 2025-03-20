@@ -52,6 +52,3 @@ class Net(nn.Module):
         return x
 
 model = Net()
-
-#print(model(X))
-#print(y)
